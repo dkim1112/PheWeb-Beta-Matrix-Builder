@@ -27,7 +27,7 @@ import pickle
 import sys
 from datetime import datetime
 
-# Significance threshold
+# Significance threshold (CAN BE ADJUSTED!!!)
 PVAL_THRESHOLD = 5e-5
 
 # Load downloaded data
@@ -40,16 +40,13 @@ except FileNotFoundError:
     print("Error: pheno_data.pkl not found. Run 1_download_phenotypes.py first!")
     sys.exit(1)
 
-print(f"\nFinding common rsIDs across all phenotypes...")
-
 # Find common rsIDs across all phenotypes
 common_rsids = set(pheno_data[list(pheno_data.keys())[0]]['rsid'])
 for pheno in pheno_data:
     common_rsids = common_rsids.intersection(set(pheno_data[pheno]['rsid']))
 
-print(f"Found {len(common_rsids)} common rsIDs across all phenotypes")
-
-print(f"\nChecking allele consistency and creating beta matrix (applying p<{PVAL_THRESHOLD} filter)...")
+print(f"Found {len(common_rsids)} common rsIDs")
+print(f"Building beta matrix (p<{PVAL_THRESHOLD})...")
 
 # Use the first phenotype as reference for alleles
 ref_pheno = list(pheno_data.keys())[0]
@@ -95,12 +92,6 @@ for pheno in list(pheno_data.keys())[1:]:
 
     if flipped_count > 0:
         allele_flips[pheno] = flipped_count
-        print(f"  {pheno}: flipped {flipped_count} betas, {sig_count} significant (p<{PVAL_THRESHOLD})")
-    else:
-        print(f"  {pheno}: {sig_count} significant (p<{PVAL_THRESHOLD})")
-
-    if mismatch_count > 0:
-        print(f"    └─ {mismatch_count} variants with mismatched alleles (set to NA)")
 
     # Add to beta matrix
     beta_matrix[pheno] = merged[pheno]
@@ -110,24 +101,11 @@ total_values = len(beta_matrix) * len(beta_matrix.columns)
 significant_values = beta_matrix.notna().sum().sum()
 percent_significant = (significant_values / total_values) * 100
 
-print(f"\nCreated beta matrix with {len(beta_matrix)} rsIDs and {len(beta_matrix.columns)} phenotypes")
-print(f"  Significant associations (p<{PVAL_THRESHOLD}): {significant_values}/{total_values} ({percent_significant:.2f}%)")
+print(f"\nMatrix: {len(beta_matrix)} rsIDs × {len(beta_matrix.columns)} phenotypes")
+print(f"Significant associations: {significant_values:,}/{total_values:,} ({percent_significant:.2f}%)")
 
 # Save the matrix
-print("\nSaving output file...")
 timestamp = datetime.now().strftime("%H-%M-%S")
 output_filename = f"beta_matrix_{timestamp}.csv"
 beta_matrix.to_csv(output_filename)
-print(f"  Saved: {output_filename}")
-
-# Print summary
-print(f"\nSummary:")
-print(f"  Total phenotypes: {len(pheno_data)}")
-print(f"  Total rsIDs in matrix: {len(beta_matrix)}")
-print(f"  P-value threshold applied: p < {PVAL_THRESHOLD}")
-print(f"  Phenotypes with allele flips: {len(allele_flips)}")
-if allele_flips:
-    print(f"  Flip details: {allele_flips}")
-print(f"\nSignificant associations per phenotype:")
-for pheno, count in sig_counts.items():
-    print(f"  {pheno}: {count}")
+print(f"Saved: {output_filename}")

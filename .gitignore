@@ -1,9 +1,11 @@
-# CSV files
+# Data files
 *.csv
-
-# Large data files
 *.pkl
 pheno_data.pkl
+
+# Embeddings and visualizations
+embeddings_output/
+*.png
 
 # Python cache
 __pycache__/

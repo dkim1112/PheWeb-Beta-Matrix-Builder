@@ -1,7 +1,7 @@
 # PheWeb Beta Matrix Builder Explanation
 
 ## What this script is for
-It bulk-downloads GWAS summary stats for many phenotypes from a PheWeb site, keeps only variants that have an rsID, and builds a single **beta matrix** (rows = rsIDs, columns = phenotypes). It also fixes sign flips when the reference/alternate alleles are swapped across phenotypes. Additionally, it filters variants by p-value (p < 5e-5) to include only significant associations.
+It bulk-downloads GWAS summary stats for many phenotypes from a PheWeb site, keeps only variants that have an rsID, and builds a single **beta matrix** (rows = rsIDs, columns = phenotypes). It also fixes sign flips when the reference/alternate alleles are swapped across phenotypes. Additionally, it filters variants by p-value (p < TBD) to include only significant associations.
 
 ---
 
@@ -83,7 +83,7 @@ beta_matrix = ref_df[[ref_pheno+'_beta']].copy()
 - Chooses the first phenotype as the **reference** for allele orientation.
 - Renames its allele columns to `ref_ref` and `ref_alt` to avoid confusion later.
 - Seeds the beta matrix with the reference phenotype's beta values.
-- Applies p-value filter (p < 5e-5) to reference phenotype.
+- Applies p-value filter (p < TBD) to reference phenotype.
 
 ### 8) For each other phenotype: align alleles and fix sign flips
 For each phenotype:
@@ -97,11 +97,11 @@ For each phenotype:
 - If **match**, keep `beta` as-is.
 - If **flipped**, **negate** `beta` (because swapping ref/alt flips the effect direction).
 - If neither (mismatch e.g., strand issues, multi-allelic quirks), set to `None` (i.e., NA).
-- **Apply p-value filter**: Set to `None` if p ≥ 5e-5.
+- **Apply p-value filter**: Set to `None` if p ≥ TBD.
 - Count and log how many were flipped and how many were mismatches.
 - Append this phenotype's aligned beta column to `beta_matrix`.
 
-**Why this matters:** GWAS effects depend on which allele you call "reference." If two files disagree on ref/alt, the sign of beta must be flipped to make them comparable. This block enforces consistent orientation across phenotypes. P-value filtering ensures only significant associations (p < 5e-5) are included in the matrix.
+**Why this matters:** GWAS effects depend on which allele you call "reference." If two files disagree on ref/alt, the sign of beta must be flipped to make them comparable. This block enforces consistent orientation across phenotypes. P-value filtering ensures only significant associations (p < TBD) are included in the matrix.
 
 ### 9) Report size of the final matrix
 ```python
@@ -127,7 +127,7 @@ print("Summary: ...")
 ---
 
 ## Practical notes
-- **P-value threshold:** Currently set to p < 5e-5. To change, edit `PVAL_THRESHOLD` in `2_build_matrix.py:30`.
+- **P-value threshold:** Currently set to p < TBD. To change, edit `PVAL_THRESHOLD` in `2_build_matrix.py:30`.
 - **Intersection can be small:** Requiring presence in *all* phenotypes can drastically shrink the row set. If you want more rows, consider a threshold (e.g., rsIDs present in ≥K phenotypes) and then handle missing values.
 - **Allele mismatches:** Rows where alleles are neither match nor flip become NA. That can happen due to strand issues (A/T or C/G SNPs) or differing variant normalization. If you care, add explicit strand handling or liftover/normalization.
 - **Duplicates:** The script keeps the first occurrence of a duplicate rsID per phenotype; if there are multiple lines per rsID (e.g., multi-allelic sites), you may want to pre-aggregate or choose by lowest p-value, etc.
@@ -137,4 +137,4 @@ print("Summary: ...")
 ---
 
 ## Output artifact
-- `(time_stamp).csv` — a dense matrix of aligned, sign-consistent betas for the set of rsIDs shared by every successfully downloaded phenotype. Only associations with p < 5e-5 are included (non-significant values are NaN).
+- `(time_stamp).csv` — a dense matrix of aligned, sign-consistent betas for the set of rsIDs shared by every successfully downloaded phenotype. Only associations with p < TBD are included (non-significant values are NaN).
