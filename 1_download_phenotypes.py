@@ -1,9 +1,9 @@
 """
 Step 1: Download phenotype summary statistics from PheWeb
 Saves data to pickle files for later processing
+Configure dataset in config.py before running.
 """
 
-# Tested with MGI-BioVU PheWeb instance (~69 phenotypes, ~6 min download time) to create analysis-ready matrices for polygenic risk scoring and cross-trait genetic correlation studies.
 import requests
 import pandas as pd
 import gzip
@@ -12,10 +12,18 @@ import sys
 import pickle
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# For record: 69 phenotypes => 69 downloads automation => took about 6 minutes total
+# Import configuration
+from config import (
+    DATASET_NAME, PHEWEB_BASE, MAX_WORKERS,
+    PHENO_DATA_PATH, setup_directories
+)
 
-# Change this to use different PheWeb instances (dependent on what we want to crawl)
-PHEWEB_BASE = "https://pheweb.org/MGI-BioVU"
+# Setup output directories
+setup_directories()
+
+print(f"Dataset: {DATASET_NAME}")
+print(f"PheWeb URL: {PHEWEB_BASE}")
+print("=" * 60)
 
 # Fetch phenotypes from API
 print(f"Fetching phenotype list from {PHEWEB_BASE}/api/phenotypes.json...")
@@ -89,7 +97,7 @@ print(f"Downloading summary statistics for {len(phenotypes)} phenotypes in paral
 pheno_data = {}
 completed = 0
 
-with ThreadPoolExecutor(max_workers=10) as executor:
+with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
     futures = {executor.submit(download_phenotype, pheno): pheno for pheno in phenotypes}
 
     for future in as_completed(futures):
@@ -107,9 +115,9 @@ if not pheno_data:
     sys.exit(1)
 
 # Save downloaded data to disk
-print(f"\nSaving downloaded data to pheno_data.pkl...")
-with open('pheno_data.pkl', 'wb') as f:
+print(f"\nSaving downloaded data to {PHENO_DATA_PATH}...")
+with open(PHENO_DATA_PATH, 'wb') as f:
     pickle.dump(pheno_data, f)
 
 print(f"Successfully downloaded and saved {len(pheno_data)} phenotypes")
-print(f"Run 2_build_matrix.py to create the beta matrix (with p<5e-5 filtering)")
+print(f"\nNext step: Run 2_build_matrix.py to create the beta matrix")

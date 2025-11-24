@@ -1,43 +1,47 @@
 """
 Step 2: Build beta matrix from downloaded phenotype data
-Checks allele consistency, applies p-value filtering (p<1e-5), and creates the final matrix
-"""
+Checks allele consistency, applies p-value filtering, and creates the final matrix
+Configure dataset in config.py before running.
 
-# Explanation of CSV output.
-'''
+Explanation of CSV output.
 The columns are:
   1. First column (unnamed): Row index (0, 1, 2, 3...)
   2. rsid: The rsID identifier for each variant
   3. __ # of phenotype columns: one column for each phenotype's beta values
 
-For MGI-BioVU, there are 69 phenotypes.
-So there are 71 columns total (index + rsid + 69 phenotypes).
-
-Beta matrix structure:
-  - Rows: rsIDs
+Output CSV structure:
+  - Rows: rsIDs (common across all phenotypes)
   - Columns: Beta values for each phenotype
-  - Values: Effect sizes (log odds ratios) where p < 5e-5, otherwise NaN
-
-Only significant associations (p < 5e-5) are included in the matrix.
-This threshold balances signal capture while filtering noise.
-'''
+  - Values: Effect sizes where p < threshold, otherwise NaN
+"""
 
 import pandas as pd
 import pickle
 import sys
 from datetime import datetime
 
-# Significance threshold (CAN BE ADJUSTED!!!)
-PVAL_THRESHOLD = 5e-5
+# Import configuration
+from config import (
+    DATASET_NAME, PVAL_THRESHOLD,
+    PHENO_DATA_PATH, DATASET_DIR, get_matrix_path, setup_directories
+)
+
+# Setup output directories
+setup_directories()
+
+print(f"Dataset: {DATASET_NAME}")
+print(f"P-value threshold: {PVAL_THRESHOLD}")
+print("=" * 60)
 
 # Load downloaded data
-print("Loading downloaded phenotype data from pheno_data.pkl...")
+print(f"Loading downloaded phenotype data from {PHENO_DATA_PATH}...")
 try:
-    with open('pheno_data.pkl', 'rb') as f:
+    with open(PHENO_DATA_PATH, 'rb') as f:
         pheno_data = pickle.load(f)
     print(f"Loaded {len(pheno_data)} phenotypes")
 except FileNotFoundError:
-    print("Error: pheno_data.pkl not found. Run 1_download_phenotypes.py first!")
+    print(f"Error: {PHENO_DATA_PATH} not found.")
+    print("Run 1_download_phenotypes.py first!")
     sys.exit(1)
 
 # Find common rsIDs across all phenotypes
@@ -101,11 +105,12 @@ total_values = len(beta_matrix) * len(beta_matrix.columns)
 significant_values = beta_matrix.notna().sum().sum()
 percent_significant = (significant_values / total_values) * 100
 
-print(f"\nMatrix: {len(beta_matrix)} rsIDs × {len(beta_matrix.columns)} phenotypes")
+print(f"\nMatrix: {len(beta_matrix)} rsIDs x {len(beta_matrix.columns)} phenotypes")
 print(f"Significant associations: {significant_values:,}/{total_values:,} ({percent_significant:.2f}%)")
 
 # Save the matrix
 timestamp = datetime.now().strftime("%H-%M-%S")
-output_filename = f"beta_matrix_{timestamp}.csv"
-beta_matrix.to_csv(output_filename)
-print(f"Saved: {output_filename}")
+output_path = get_matrix_path(timestamp)
+beta_matrix.to_csv(output_path)
+print(f"\nSaved: {output_path}")
+print(f"\nNext step: Run 3_create_embeddings.py to create embeddings and visualizations")

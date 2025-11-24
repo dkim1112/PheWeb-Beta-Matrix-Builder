@@ -5,13 +5,46 @@ It bulk-downloads GWAS summary stats for many phenotypes from a PheWeb site, kee
 
 ---
 
+## Folder Structure
+```
+PheWeb-Matrix-Builder/
+├── config.py                    # Dataset configuration
+├── 1_download_phenotypes.py     # Step 1: Download data
+├── 2_build_matrix.py            # Step 2: Build beta matrix
+├── 3_create_embeddings.py       # Step 3: Create embeddings
+└── data/
+    └── {DATASET_NAME}/          # e.g., MGI-BioVU/
+        ├── pheno_data.pkl
+        ├── beta_matrix_*.csv
+        └── embeddings/
+            ├── *_variant_embeddings.csv
+            ├── *_phenotype_embeddings.csv
+            └── *.png
+```
+
+---
+
+## Quick Start
+```bash
+# 1. Edit config.py to set your dataset
+# 2. Run in order:
+python 1_download_phenotypes.py
+python 2_build_matrix.py
+python 3_create_embeddings.py
+```
+
+---
+
 ## Step-by-step walk-through
 
 ### 1) Choose which PheWeb to crawl
+Edit `config.py`:
 ```python
+DATASET_NAME = "MGI-BioVU"
 PHEWEB_BASE = "https://pheweb.org/MGI-BioVU"
 ```
-- This base URL points to a specific PheWeb instance. All API and download URLs are built from this.
+- `DATASET_NAME` determines the output folder under `data/`.
+- `PHEWEB_BASE` points to a specific PheWeb instance. All API and download URLs are built from this.
 
 ### 2) Get the list of phenotypes from the API
 ```python
@@ -127,14 +160,20 @@ print("Summary: ...")
 ---
 
 ## Practical notes
-- **P-value threshold:** Currently set to p < TBD. To change, edit `PVAL_THRESHOLD` in `2_build_matrix.py:30`.
+- **P-value threshold:** Currently set to p < 5e-5. To change, edit `PVAL_THRESHOLD` in `config.py`.
 - **Intersection can be small:** Requiring presence in *all* phenotypes can drastically shrink the row set. If you want more rows, consider a threshold (e.g., rsIDs present in ≥K phenotypes) and then handle missing values.
 - **Allele mismatches:** Rows where alleles are neither match nor flip become NA. That can happen due to strand issues (A/T or C/G SNPs) or differing variant normalization. If you care, add explicit strand handling or liftover/normalization.
 - **Duplicates:** The script keeps the first occurrence of a duplicate rsID per phenotype; if there are multiple lines per rsID (e.g., multi-allelic sites), you may want to pre-aggregate or choose by lowest p-value, etc.
-- **Performance:** Parallel downloads help. If the instance is rate-limited, reduce `max_workers`.
+- **Performance:** Parallel downloads help. If the instance is rate-limited, reduce `MAX_WORKERS` in `config.py`.
 - **Schema changes:** If a PheWeb instance uses different column names, the `rsid` and `pval` detection logic may need tweaking.
 
 ---
 
-## Output artifact
-- `(time_stamp).csv` — a dense matrix of aligned, sign-consistent betas for the set of rsIDs shared by every successfully downloaded phenotype. Only associations with p < TBD are included (non-significant values are NaN).
+## Output artifacts
+All outputs are saved to `data/{DATASET_NAME}/`:
+- `pheno_data.pkl` — downloaded phenotype data (from Step 1)
+- `beta_matrix_*.csv` — a dense matrix of aligned, sign-consistent betas for the set of rsIDs shared by every successfully downloaded phenotype. Only associations with p < 5e-5 are included (non-significant values are NaN).
+- `embeddings/` — SVD embeddings and visualizations (from Step 3):
+  - `*_variant_embeddings.csv` — 50-dimensional variant embeddings
+  - `*_phenotype_embeddings.csv` — 50-dimensional phenotype embeddings
+  - `*.png` — 2D/3D PCA plots and variance explained charts
